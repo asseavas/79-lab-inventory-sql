@@ -1,5 +1,5 @@
 import path from 'path';
-import {CorsOptions} from 'cors';
+import { CorsOptions } from 'cors';
 
 const rootPath = __dirname;
 
@@ -12,7 +12,7 @@ const corsOptions: CorsOptions = {
     } else {
       callback(new Error('Not allowed by CORS'));
     }
-  }
+  },
 };
 
 const config = {
@@ -23,8 +23,8 @@ const config = {
     host: 'localhost',
     user: 'root',
     password: 'root',
-    database: 'shop',
-  }
+    database: 'inventory',
+  },
 };
 
 export default config;
