@@ -1,0 +1,5 @@
+node_modules
+public
+vite.config.ts
+.eslintrc.cjs
+README.md
