@@ -10,7 +10,6 @@ categoriesRouter.get('/', async (req, res, next) => {
     const result = await mysqlDb
       .getConnection()
       .query('SELECT id, title FROM categories');
-
     const categories = result[0] as Category[];
     return res.send(categories);
   } catch (e) {
@@ -29,7 +28,6 @@ categoriesRouter.get('/:id', async (req, res, next) => {
     if (categories.length === 0) {
       return res.status(404).send({ error: 'Category not found' });
     }
-
     return res.send(categories[0]);
   } catch (e) {
     next(e);
@@ -46,22 +44,17 @@ categoriesRouter.post('/', async (req, res, next) => {
       title: req.body.title,
       description: req.body.description || null,
     };
-
     const insertResult = await mysqlDb
       .getConnection()
       .query('INSERT INTO categories (title, description) VALUES (?, ?)', [
         category.title,
         category.description,
       ]);
-
     const resultHeader = insertResult[0] as ResultSetHeader;
-
     const getNewResult = await mysqlDb
       .getConnection()
       .query('SELECT * FROM categories WHERE id = ?', [resultHeader.insertId]);
-
     const categories = getNewResult[0] as Category[];
-
     return res.send(categories[0]);
   } catch (e) {
     next(e);
@@ -71,7 +64,6 @@ categoriesRouter.post('/', async (req, res, next) => {
 categoriesRouter.delete('/:id', async (req, res, next) => {
   try {
     const id = req.params.id;
-
     const [relatedResources] = (await mysqlDb
       .getConnection()
       .query('SELECT COUNT(*) as count FROM items WHERE category_id = ?', [
@@ -87,7 +79,6 @@ categoriesRouter.delete('/:id', async (req, res, next) => {
     const deleteResult = await mysqlDb
       .getConnection()
       .query('DELETE FROM categories WHERE id = ?', [id]);
-
     const resultHeader = deleteResult[0] as ResultSetHeader;
 
     if (resultHeader.affectedRows > 0) {
@@ -99,6 +90,49 @@ categoriesRouter.delete('/:id', async (req, res, next) => {
     }
   } catch (error) {
     next(error);
+  }
+});
+
+categoriesRouter.put('/:id', async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const { title, description } = req.body;
+
+    if (!title && !description) {
+      return res.status(400).send({ error: 'No data provided to update.' });
+    }
+
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (title) {
+      fields.push('title = ?');
+      values.push(title);
+    }
+
+    if (description) {
+      fields.push('description = ?');
+      values.push(description);
+    }
+
+    values.push(id);
+
+    const updateResult = await mysqlDb
+      .getConnection()
+      .query(`UPDATE categories SET ${fields.join(', ')} WHERE id = ?`, values);
+    const resultHeader = updateResult[0] as ResultSetHeader;
+
+    if (resultHeader.affectedRows === 0) {
+      return res.status(404).send({ error: 'Category not found.' });
+    }
+
+    const [getNewResult] = await mysqlDb
+      .getConnection()
+      .query('SELECT * FROM categories WHERE id = ?', [id]);
+    const categories = getNewResult as Category[];
+    return res.send(categories[0]);
+  } catch (e) {
+    next(e);
   }
 });
 

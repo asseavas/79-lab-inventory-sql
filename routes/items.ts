@@ -114,4 +114,88 @@ itemsRouter.delete('/:id', async (req, res, next) => {
   }
 });
 
+itemsRouter.put(
+  '/:id',
+  imagesUpload.single('image'),
+  async (req, res, next) => {
+    try {
+      const id = req.params.id;
+      const { title, description, category_id, place_id } = req.body;
+
+      if (!title && !description && !category_id && !place_id && !req.file) {
+        return res.status(400).send({ error: 'No data provided to update.' });
+      }
+
+      const fields: string[] = [];
+      const values: any[] = [];
+
+      if (title) {
+        fields.push('title = ?');
+        values.push(title);
+      }
+
+      if (description) {
+        fields.push('description = ?');
+        values.push(description);
+      }
+
+      if (category_id) {
+        const categoryId = parseInt(category_id);
+        const [categoryResult] = await mysqlDb
+          .getConnection()
+          .query('SELECT id FROM categories WHERE id = ?', [categoryId]);
+
+        if ((categoryResult as any[]).length === 0) {
+          return res
+            .status(404)
+            .send({ error: 'Category ID not found. Please enter a valid ID.' });
+        }
+
+        fields.push('category_id = ?');
+        values.push(categoryId);
+      }
+
+      if (place_id) {
+        const placeId = parseInt(place_id);
+        const [placeResult] = await mysqlDb
+          .getConnection()
+          .query('SELECT id FROM places WHERE id = ?', [placeId]);
+
+        if ((placeResult as any[]).length === 0) {
+          return res
+            .status(404)
+            .send({ error: 'Place ID not found. Please enter a valid ID.' });
+        }
+
+        fields.push('place_id = ?');
+        values.push(placeId);
+      }
+
+      if (req.file) {
+        fields.push('image = ?');
+        values.push(req.file.filename);
+      }
+
+      values.push(id);
+
+      const updateResult = await mysqlDb
+        .getConnection()
+        .query(`UPDATE items SET ${fields.join(', ')} WHERE id = ?`, values);
+      const resultHeader = updateResult[0] as ResultSetHeader;
+
+      if (resultHeader.affectedRows === 0) {
+        return res.status(404).send({ error: 'Item not found.' });
+      }
+
+      const [getNewResult] = await mysqlDb
+        .getConnection()
+        .query('SELECT * FROM items WHERE id = ?', [id]);
+      const items = getNewResult as Item[];
+      return res.send(items[0]);
+    } catch (e) {
+      next(e);
+    }
+  },
+);
+
 export default itemsRouter;
